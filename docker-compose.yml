@@ -1,0 +1,43 @@
+services:
+  scheduler:
+    build: .
+    container_name: gpu-scheduler
+    ports:
+      - "8000:8000"
+    environment:
+      - TOTAL_GPUS=8
+      - TICK_SECONDS=1
+    volumes:
+      - scheduler-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: gpu-scheduler-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - scheduler
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: gpu-scheduler-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  scheduler-data:

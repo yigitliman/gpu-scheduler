@@ -1,0 +1,71 @@
+{
+  "title": "GPU Scheduler",
+  "uid": "gpu-scheduler",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "GPU utilization",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "cluster_gpus_allocated / cluster_gpus_total",
+          "legendFormat": "allocated"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Queue depth and running jobs",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "scheduler_queue_depth", "legendFormat": "queued" },
+        { "expr": "scheduler_running_jobs", "legendFormat": "running" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Queue wait p95",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(scheduler_queue_wait_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 wait"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Decayed GPU-hours per user (fair-share input)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "scheduler_user_decayed_gpu_hours",
+          "legendFormat": "{{user}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Job throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "rate(scheduler_jobs_started_total[5m])", "legendFormat": "started/s" },
+        { "expr": "rate(scheduler_jobs_finished_total[5m])", "legendFormat": "finished/s" }
+      ]
+    }
+  ]
+}
