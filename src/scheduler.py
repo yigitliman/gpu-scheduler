@@ -48,7 +48,15 @@ def _earliest_time_with_gpus(running: list[Job], needed: int, free_now: int, now
     return float("inf")
 
 
-def plan_tick(jobs: list[Job], now: float, total_gpus: int) -> TickPlan:
+def plan_tick(
+    jobs: list[Job], now: float, total_gpus: int, backfill: bool = True
+) -> TickPlan:
+    """Decide what happens this tick.
+
+    `backfill=False` reduces the policy to strict priority order, where the head
+    of the queue blocks everything behind it. Nothing in the service turns it
+    off; it exists so the benchmark can measure what backfill is worth.
+    """
     finish = [j for j in jobs if j.state == JobState.RUNNING and now >= j.expected_finish()]
     finished_ids = {j.id for j in finish}
 
@@ -74,6 +82,9 @@ def plan_tick(jobs: list[Job], now: float, total_gpus: int) -> TickPlan:
             sim[head.id] = replace(head, state=JobState.RUNNING, started_at=now)
             started_ids.append(head.id)
             continue
+
+        if not backfill:
+            break
 
         # The head cannot run yet. Hold a reservation for it, then let smaller
         # jobs use the idle GPUs, but only if they finish before the reservation.

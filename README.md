@@ -117,6 +117,30 @@ Bea's job backfills into the gap and runs. Cai's job does not, and one GPU is le
 deliberately idle rather than delay Amir. `GET /queue` shows the priority
 components that produced that ordering.
 
+## What backfill is worth
+
+`benchmarks/backfill.py` pushes one synthetic workload through the scheduler
+twice — strict priority order, then EASY backfill — and reports the difference.
+400 jobs across 5 users on 8 GPUs, mixed 1-to-8-GPU shapes, fixed seed:
+
+| Metric | Strict priority | EASY backfill | Change |
+|---|---:|---:|---:|
+| GPU utilisation | 89.5% | 99.5% | **+11.2%** |
+| Makespan | 258.5 h | 232.4 h | **-10.1%** |
+| Mean queue wait | 109.6 h | 87.9 h | **-19.8%** |
+| Median queue wait | 119.8 h | 98.1 h | **-18.1%** |
+| p95 queue wait | 206.1 h | 179.6 h | **-12.9%** |
+
+```bash
+python benchmarks/backfill.py
+```
+
+The cluster is simulated and jobs run for exactly their estimate, so this
+isolates the scheduling policy — it is not a measurement of a real cluster,
+where overrunning estimates erode the reservation guarantee (see below). The
+gain comes from the 8-GPU jobs: under strict priority they stall the queue
+behind them, and the idle GPUs in that gap are what backfill reclaims.
+
 ## API
 
 | Method | Endpoint | Description |
