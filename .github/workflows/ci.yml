@@ -61,7 +61,7 @@ jobs:
       - name: Push image to GHCR
         if: github.event_name == 'push'
         run: |
-          docker tag gpu-scheduler:${{ github.sha }} ghcr.io/yigit-8/gpu-scheduler:latest
-          docker tag gpu-scheduler:${{ github.sha }} ghcr.io/yigit-8/gpu-scheduler:${{ github.sha }}
-          docker push ghcr.io/yigit-8/gpu-scheduler:latest
-          docker push ghcr.io/yigit-8/gpu-scheduler:${{ github.sha }}
+          docker tag gpu-scheduler:${{ github.sha }} ghcr.io/yigitliman/gpu-scheduler:latest
+          docker tag gpu-scheduler:${{ github.sha }} ghcr.io/yigitliman/gpu-scheduler:${{ github.sha }}
+          docker push ghcr.io/yigitliman/gpu-scheduler:latest
+          docker push ghcr.io/yigitliman/gpu-scheduler:${{ github.sha }}

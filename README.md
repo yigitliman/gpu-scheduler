@@ -1,6 +1,6 @@
 # Fair-Share GPU Scheduler
 
-![CI](https://github.com/yigit-8/gpu-scheduler/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/yigitliman/gpu-scheduler/actions/workflows/ci.yml/badge.svg)
 
 A job scheduler for a shared GPU cluster. Users submit jobs asking for GPUs and a
 runtime estimate; the scheduler decides who runs next using fair-share priority,
