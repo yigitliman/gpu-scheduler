@@ -1,8 +1,8 @@
 """
 What is backfill actually worth?
 
-Runs one synthetic workload through the scheduler twice — once in strict
-priority order, once with EASY backfill — and reports the difference. The
+Runs one synthetic workload through the scheduler twice (once in strict
+priority order, once with EASY backfill) and reports the difference. The
 cluster is simulated, not real: jobs run for exactly their estimate, so this
 measures the scheduling policy in isolation rather than a production cluster.
 

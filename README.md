@@ -120,7 +120,7 @@ components that produced that ordering.
 ## What backfill is worth
 
 `benchmarks/backfill.py` pushes one synthetic workload through the scheduler
-twice — strict priority order, then EASY backfill — and reports the difference.
+twice (strict priority order, then EASY backfill) and reports the difference.
 400 jobs across 5 users on 8 GPUs, mixed 1-to-8-GPU shapes, fixed seed:
 
 | Metric | Strict priority | EASY backfill | Change |
@@ -136,7 +136,7 @@ python benchmarks/backfill.py
 ```
 
 The cluster is simulated and jobs run for exactly their estimate, so this
-isolates the scheduling policy — it is not a measurement of a real cluster,
+isolates the scheduling policy. It is not a measurement of a real cluster,
 where overrunning estimates erode the reservation guarantee (see below). The
 gain comes from the 8-GPU jobs: under strict priority they stall the queue
 behind them, and the idle GPUs in that gap are what backfill reclaims.
