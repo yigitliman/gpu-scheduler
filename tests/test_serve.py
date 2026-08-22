@@ -41,6 +41,22 @@ def test_job_asking_for_more_gpus_than_the_cluster_has_is_rejected(client):
     assert response.status_code == 400
 
 
+def test_job_over_the_per_job_gpu_limit_is_rejected(client, monkeypatch):
+    """Separate from the cluster-size check: an operator can cap a single job well
+    below the size of the cluster."""
+    monkeypatch.setattr(settings, "MAX_GPUS_PER_JOB", 2)
+
+    response = submit(client, "alice", gpus=3)
+    assert response.status_code == 400
+    assert "per-job GPU limit" in response.json()["detail"]
+
+
+def test_job_over_the_maximum_runtime_estimate_is_rejected(client):
+    response = submit(client, "alice", gpus=1, est_seconds=settings.MAX_EST_SECONDS + 1)
+    assert response.status_code == 400
+    assert "runtime estimate" in response.json()["detail"]
+
+
 def test_unknown_job_returns_404(client):
     assert client.get("/jobs/424242").status_code == 404
     assert client.delete("/jobs/424242").status_code == 404

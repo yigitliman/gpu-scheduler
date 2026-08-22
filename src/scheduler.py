@@ -21,7 +21,7 @@ estimate does delay the reserved job. See the README for how that is mitigated.
 
 from dataclasses import dataclass, replace
 
-from src.fairshare import order_queue
+from src.fairshare import decayed_usage_by_user, order_queue
 from src.models import Job, JobState
 
 
@@ -69,18 +69,31 @@ def plan_tick(
     def running() -> list[Job]:
         return [j for j in sim.values() if j.state == JobState.RUNNING]
 
+    # Tracked incrementally rather than recounted: the loop below asks for the
+    # free capacity once per queued job it considers.
+    allocated = sum(j.gpus for j in running())
+
     def free_gpus() -> int:
-        return total_gpus - sum(j.gpus for j in running())
+        return total_gpus - allocated
 
-    while True:
-        queue = order_queue(list(sim.values()), now)
-        if not queue:
-            break
+    # Priorities are fixed for the whole tick: a job started now has consumed no
+    # GPU-seconds yet, so starting one changes neither the usage map nor anyone's
+    # fair-share factor. The queue is therefore ordered once and then walked,
+    # rather than re-derived (a full rescan of every job's history plus a re-sort)
+    # after each job that starts.
+    visible = list(sim.values())
+    usage = decayed_usage_by_user(visible, now)
+    known_users = {j.user for j in visible}
+    queue = order_queue(visible, now, usage, known_users)
 
-        head = queue[0]
+    index = 0
+    while index < len(queue):
+        head = queue[index]
         if head.gpus <= free_gpus():
             sim[head.id] = replace(head, state=JobState.RUNNING, started_at=now)
             started_ids.append(head.id)
+            allocated += head.gpus
+            index += 1
             continue
 
         if not backfill:
@@ -89,10 +102,11 @@ def plan_tick(
         # The head cannot run yet. Hold a reservation for it, then let smaller
         # jobs use the idle GPUs, but only if they finish before the reservation.
         reservation = _earliest_time_with_gpus(running(), head.gpus, free_gpus(), now)
-        for job in queue[1:]:
+        for job in queue[index + 1 :]:
             if job.gpus <= free_gpus() and now + job.est_seconds <= reservation:
                 sim[job.id] = replace(job, state=JobState.RUNNING, started_at=now)
                 started_ids.append(job.id)
+                allocated += job.gpus
         break
 
     by_id = {j.id: j for j in jobs}

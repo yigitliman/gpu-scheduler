@@ -1,4 +1,6 @@
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from src.config import settings
@@ -7,11 +9,22 @@ from src.models import Job, JobState
 _COLUMNS = "id, user, gpus, est_seconds, state, submitted_at, started_at, finished_at"
 
 
-def connect() -> sqlite3.Connection:
+@contextmanager
+def connect() -> Iterator[sqlite3.Connection]:
+    """A connection that commits on success, rolls back on failure, and always closes.
+
+    `with sqlite3.connect(...)` alone only manages the transaction: its __exit__
+    commits or rolls back and then leaves the connection open, so every helper
+    below used to leak one file handle per call.
+    """
     Path(settings.DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(settings.DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def init_db() -> None:

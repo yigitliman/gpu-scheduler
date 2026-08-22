@@ -56,9 +56,19 @@ def decayed_usage_by_user(jobs: Iterable[Job], now: float) -> dict[str, float]:
     return usage
 
 
-def fairshare_factor(user: str, usage: dict[str, float], known_users: set[str]) -> float:
-    """Fair-share factor in (0, 1]. Higher means more entitled to run next."""
-    total = sum(usage.values())
+def fairshare_factor(
+    user: str,
+    usage: dict[str, float],
+    known_users: set[str],
+    total: float | None = None,
+) -> float:
+    """Fair-share factor in (0, 1]. Higher means more entitled to run next.
+
+    `total` is the sum of `usage`; pass it when ranking a whole queue so the sum
+    is not recomputed for every job being compared.
+    """
+    if total is None:
+        total = sum(usage.values())
     num_users = max(len(known_users), 1)
     if total <= 0:
         return 1.0
@@ -82,19 +92,38 @@ def age_factor(job: Job, now: float) -> float:
     return waited_hours / settings.AGE_UNIT_HOURS
 
 
-def priority(job: Job, usage: dict[str, float], known_users: set[str], now: float) -> float:
+def priority(
+    job: Job,
+    usage: dict[str, float],
+    known_users: set[str],
+    now: float,
+    total: float | None = None,
+) -> float:
     """Scheduling priority of a queued job. Higher runs first."""
-    fair = fairshare_factor(job.user, usage, known_users)
+    fair = fairshare_factor(job.user, usage, known_users, total)
     age = age_factor(job, now)
     return settings.W_FAIR * fair + settings.W_AGE * age
 
 
-def order_queue(jobs: list[Job], now: float) -> list[Job]:
-    """Queued jobs, highest priority first. Ties break on submission order (FIFO)."""
+def order_queue(
+    jobs: list[Job],
+    now: float,
+    usage: dict[str, float] | None = None,
+    known_users: set[str] | None = None,
+) -> list[Job]:
+    """Queued jobs, highest priority first. Ties break on submission order (FIFO).
+
+    Deriving usage means walking every job's history, so a caller that already has
+    it for this instant (the scheduler does, once per tick) passes it in rather
+    than paying for the scan again.
+    """
     queued = [j for j in jobs if j.state == JobState.QUEUED]
-    usage = decayed_usage_by_user(jobs, now)
-    known_users = {j.user for j in jobs}
+    if usage is None:
+        usage = decayed_usage_by_user(jobs, now)
+    if known_users is None:
+        known_users = {j.user for j in jobs}
+    total = sum(usage.values())
     return sorted(
         queued,
-        key=lambda j: (-priority(j, usage, known_users, now), j.submitted_at, j.id),
+        key=lambda j: (-priority(j, usage, known_users, now, total), j.submitted_at, j.id),
     )
