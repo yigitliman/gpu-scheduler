@@ -95,6 +95,12 @@ docker compose up --build
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 (admin / admin) |
 
+CI publishes the API image to GHCR on every push to `main`:
+
+```bash
+docker pull ghcr.io/yigitliman/gpu-scheduler:latest
+```
+
 ## Seeing backfill work
 
 With a 4-GPU cluster, occupy two GPUs for 20 seconds, then queue a job that needs
